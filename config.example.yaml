@@ -1,0 +1,6 @@
+robot:
+    debug: true
+    token: "token12345"
+
+feishu:
+    api: "http://feishu.webbot.com/web-bot"
