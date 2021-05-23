@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"html"
 	"html/template"
 	"net/http"
@@ -63,50 +62,32 @@ func sendMessages(msgs []string) {
 		return
 	}
 
-	doSend(msgs)
+	if msg := selectValidMsg(msgs); msg == "" {
+		logrus.Warnln("no valid msg be selected")
+		return
+	} else {
+		doSend(msg)
+	}
 }
 
-func doSend(msgs []string) {
+func doSend(text string) {
+	doSendToFeishu(text)
+
+	doSendToWeixinRobot(text)
+}
+
+func selectValidMsg(msgs []string) string {
 	h := time.Now().Local().Hour()
 
-	for _, msg := range msgs {
-		doSendToFeishu(msg)
-	}
-
 	if h >= 7 && h <= 9 { // 上午可以发送的时间：早上7点 到 早上9点
-		logrus.Infof("send: %s", msgs[0])
+		return msgs[0]
 	} else if h >= 15 && h <= 17 { // 下午的发送时间: 3 - 5
-		logrus.Infof("send: %s", msgs[1])
+		return msgs[1]
 	} else {
 		logrus.Warnf("invalid time to send: %s", msgs)
 	}
-}
 
-func doSendToFeishu(text string) {
-	feishuAPI := viper.GetString("feishu.api")
-
-	msg := M{
-		"msg_type": "text",
-		"content": M{
-			"text": text,
-		},
-	}
-
-	data, _ := json.Marshal(msg)
-	var resp struct {
-		StatusCode    int
-		StatusMessage string
-	}
-
-	if err := postWithDecode(context.Background(), feishuAPI, bytes.NewReader(data), &resp); err != nil {
-		logrus.Errorf("post feishu error: %v", err)
-		return
-	}
-
-	if resp.StatusCode != 0 {
-		logrus.Errorf("post feishu error: status_code=%v status_msg:%s", resp.StatusCode, resp.StatusMessage)
-		return
-	}
+	return ""
 }
 
 // 发送的一些策略
